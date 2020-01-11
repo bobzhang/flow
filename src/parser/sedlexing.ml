@@ -5,26 +5,6 @@
 exception InvalidCodepoint of int
 exception MalFormed
 
-
-let gen_of_channel chan =
-  let f () =
-    try Some (input_char chan)
-    with End_of_file -> None
-  in
-  f
-
-let (>>=) o f = match o with
-  | Some x -> f x
-  | None -> None
-
-
-(* For legacy purposes. *)
-let gen_of_stream stream =
-  let f () =
-    try Some (Stream.next stream)
-    with Stream.Failure -> None
-  in f
-
 (* Absolute position from the beginning of the stream *)
 type apos = int
 
@@ -96,25 +76,13 @@ let fill_buf_from_gen f gen buf pos len =
   in
   aux 0
 
-let from_gen s =
-  create (fill_buf_from_gen (fun id -> id) s)
 
-let from_stream s = from_gen @@ gen_of_stream s
 
 let from_int_array a =
   let len = Array.length a in
   {
     empty_lexbuf with
       buf = Array.init len (fun i -> Uchar.of_int a.(i));
-      len = len;
-      finished = true;
-  }
-
-let from_uchar_array a =
-  let len = Array.length a in
-  {
-    empty_lexbuf with
-      buf = Array.init len (fun i -> a.(i));
       len = len;
       finished = true;
   }
@@ -212,48 +180,6 @@ let lexing_positions lexbuf =
   } in
   (start_p, curr_p)
 
-let with_tokenizer lexer' lexbuf =
-  let lexer () =
-    let token = lexer' lexbuf in
-    let (start_p, curr_p) = lexing_positions lexbuf in
-    (token, start_p, curr_p)
-  in lexer
-
-module Latin1 = struct
-  let from_gen s =
-    create (fill_buf_from_gen Uchar.of_char s)
-
-  let from_stream s = from_gen @@ gen_of_stream s
-
-  let from_string s =
-    let len = String.length s in
-    {
-     empty_lexbuf with
-     buf = Array.init len (fun i -> Uchar.of_char s.[i]);
-     len = len;
-     finished = true;
-    }
-
-  let from_channel ic =
-    from_gen (gen_of_channel ic)
-
-  let to_latin1 c =
-    if Uchar.is_char c
-    then Uchar.to_char c
-    else raise (InvalidCodepoint (Uchar.to_int c))
-
-  let lexeme_char lexbuf pos =
-    to_latin1 (lexeme_char lexbuf pos)
-
-  let sub_lexeme lexbuf pos len =
-    let s = Bytes.create len in
-    for i = 0 to len - 1 do Bytes.set s i (to_latin1 lexbuf.buf.(lexbuf.start_pos + pos + i)) done;
-    Bytes.to_string s
-
-  let lexeme lexbuf =
-    sub_lexeme lexbuf 0 (lexbuf.pos - lexbuf.start_pos)
-end
-
 
 module Utf8 = struct
   module Helper = struct
@@ -295,43 +221,6 @@ module Utf8 = struct
           ((n1 land 0x07) lsl 18) lor ((n2 land 0x3f) lsl 12) lor
           ((n3 land 0x3f) lsl 6) lor (n4 land 0x3f)
       | _ -> raise MalFormed
-
-
-    let from_gen s =
-      Gen.next s >>= function
-      | '\000'..'\127' as c ->
-          Some (Uchar.of_char c)
-      | '\192'..'\223' as c ->
-	  let n1 = Char.code c in
-	  Gen.next s >>= fun c2 ->
-	  let n2 = Char.code c2 in
-          if (n2 lsr 6 != 0b10) then raise MalFormed;
-          Some (Uchar.of_int (((n1 land 0x1f) lsl 6) lor (n2 land 0x3f)))
-      | '\224'..'\239' as c ->
-	  let n1 = Char.code c in
-	  Gen.next s >>= fun c2 ->
-	  let n2 = Char.code c2 in
-	  Gen.next s >>= fun c3 ->
-	  let n3 = Char.code c3 in
-          if (n2 lsr 6 != 0b10) || (n3 lsr 6 != 0b10) then raise MalFormed;
-          Some (Uchar.of_int (((n1 land 0x0f) lsl 12)
-                              lor ((n2 land 0x3f) lsl 6) lor (n3 land 0x3f)))
-      | '\240'..'\247' as c ->
-	  let n1 = Char.code c in
-	  Gen.next s >>= fun c2 ->
-	  let n2 = Char.code c2 in
-	  Gen.next s >>= fun c3 ->
-	  let n3 = Char.code c3 in
-	  Gen.next s >>= fun c4 ->
-	  let n4 = Char.code c4 in
-          if (n2 lsr 6 != 0b10) || (n3 lsr 6 != 0b10) || (n4 lsr 6 != 0b10)
-	  then raise MalFormed;
-          Some (Uchar.of_int (((n1 land 0x07) lsl 18)
-                              lor ((n2 land 0x3f) lsl 12)
-                              lor ((n3 land 0x3f) lsl 6) lor (n4 land 0x3f)))
-      | _ -> raise MalFormed
-
-
 
     let compute_len s pos bytes =
       let rec aux n i =
@@ -386,18 +275,8 @@ module Utf8 = struct
         else Buffer.contents b in
       aux apos len
 
-    let gen_from_char_gen s = (fun () -> from_gen s)
+
   end
-
-  let from_channel ic =
-    from_gen (Helper.gen_from_char_gen (gen_of_channel ic))
-
-  let from_gen s =
-    create (fill_buf_from_gen (fun id -> id)
-        (Helper.gen_from_char_gen s))
-
-  let from_stream s = from_gen @@ gen_of_stream s
-
   let from_string s =
     from_int_array (Helper.to_int_array s 0 (String.length s))
 
@@ -406,122 +285,4 @@ module Utf8 = struct
 
   let lexeme lexbuf =
     sub_lexeme lexbuf 0 (lexbuf.pos - lexbuf.start_pos)
-end
-
-
-module Utf16 = struct
-  type byte_order = Little_endian | Big_endian
-  module Helper = struct
-    (* http://www.ietf.org/rfc/rfc2781.txt *)
-
-    let number_of_char_pair bo c1 c2 = match bo with
-    | Little_endian -> ((Char.code c2) lsl 8) + (Char.code c1)
-    | Big_endian -> ((Char.code c1) lsl 8) + (Char.code c2)
-
-    let char_pair_of_number bo num = match bo with
-    | Little_endian ->
-        (Char.chr (num land 0xFF), Char.chr ((num lsr 8) land 0xFF ))
-    | Big_endian ->
-        (Char.chr ((num lsr 8) land 0xFF), Char.chr (num land 0xFF))
-
-    let next_in_gen bo s =
-      Gen.next s >>= fun c1 ->
-      Gen.next s >>= fun c2 ->
-      Some (number_of_char_pair bo c1 c2)
-
-    let from_gen bo s w1 =
-      if w1 = 0xfffe then raise (InvalidCodepoint w1);
-      if w1 < 0xd800 || 0xdfff < w1 then Some (Uchar.of_int w1)
-      else if w1 <= 0xdbff
-      then
-        next_in_gen bo s >>= fun w2 ->
-        if w2 < 0xdc00 || w2 > 0xdfff then raise MalFormed;
-        let upper10 = (w1 land 0x3ff) lsl 10
-        and lower10 = w2 land 0x3ff in
-        Some (Uchar.of_int (0x10000 + upper10 + lower10))
-      else raise MalFormed
-
-    let gen_from_char_gen opt_bo s =
-      let bo = ref opt_bo in
-      fun () ->
-        Gen.next s >>= fun c1 ->
-        Gen.next s >>= fun c2 ->
-        let o = match !bo with
-          | Some o -> o
-          | None ->
-              let o = match (Char.code c1, Char.code c2) with
-                | (0xff,0xfe) -> Little_endian
-                | _ -> Big_endian in
-              bo := Some o;
-              o in
-        from_gen o s (number_of_char_pair o c1 c2)
-
-
-    let compute_len opt_bo str pos bytes =
-      let s = gen_from_char_gen opt_bo
-          (Gen.init ~limit:(bytes - pos) (fun i -> (str.[i + pos])))
-      in
-      let l = ref 0 in
-      Gen.iter (fun _ -> incr l) s ;
-      !l
-
-    let blit_to_int opt_bo s spos a apos bytes =
-      let s = gen_from_char_gen opt_bo
-          (Gen.init ~limit:(bytes - spos) (fun i -> (s.[i + spos]))) in
-      let p = ref apos in
-      Gen.iter (fun x -> a.(!p) <- x ; incr p) s
-
-
-    let to_uchar_array opt_bo s pos bytes =
-      let len = compute_len opt_bo s pos bytes in
-      let a = Array.make len (Uchar.of_int 0) in
-      blit_to_int opt_bo s pos a 0 bytes ;
-       a
-
-    let store bo buf code =
-      if code < 0x10000
-      then (
-        let (c1,c2) = char_pair_of_number bo code in
-        Buffer.add_char buf c1;
-        Buffer.add_char buf c2
-       ) else (
-        let u' = code - 0x10000  in
-        let w1 = 0xd800 + (u' lsr 10)
-        and w2 = 0xdc00 + (u' land 0x3ff) in
-        let (c1,c2) = char_pair_of_number bo w1
-        and (c3,c4) = char_pair_of_number bo w2 in
-        Buffer.add_char buf c1;
-        Buffer.add_char buf c2;
-        Buffer.add_char buf c3;
-        Buffer.add_char buf c4
-       )
-
-    let from_uchar_array bo a apos len bom =
-      let b = Buffer.create (len * 4 + 2) in (* +2 for the BOM *)
-      if bom then store bo b 0xfeff ; (* first, store the BOM *)
-      let rec aux apos len =
-        if len > 0
-        then (store bo b (Uchar.to_int a.(apos)); aux (succ apos) (pred len))
-        else Buffer.contents b  in
-      aux apos len
-end
-
-
-  let from_gen s opt_bo =
-    from_gen (Helper.gen_from_char_gen opt_bo s)
-
-  let from_stream s = from_gen @@ gen_of_stream s
-
-  let from_channel ic opt_bo =
-    from_gen (gen_of_channel ic) opt_bo
-
-  let from_string s opt_bo =
-    let a = Helper.to_uchar_array opt_bo s 0 (String.length s) in
-    from_uchar_array a
-
-  let sub_lexeme lb pos len bo bom  =
-    Helper.from_uchar_array bo lb.buf (lb.start_pos + pos) len bom
-
-  let lexeme lb bo bom =
-    sub_lexeme lb 0 (lb.pos - lb.start_pos) bo bom
 end

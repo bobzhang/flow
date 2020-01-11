@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *)
 
-[%%gen
+(* [%%gen *)
 (*
  * An Ocaml implementation of the SpiderMonkey Parser API
  * https://developer.mozilla.org/en-US/docs/SpiderMonkey/Parser_API
@@ -1522,6 +1522,6 @@ and Function : sig
     | BodyExpression of ('M, 'T) Expression.t
   [@@deriving show]
 end =
-  Function]
+  Function (*]*)
 
 type ('M, 'T) program = 'M * ('M, 'T) Statement.t list * 'M Comment.t list [@@deriving show]
