@@ -5,4 +5,5 @@
   (libraries
     sedlex
     wtf8)
+  (instrumentation (backend larndmarks))
   (preprocess (pps ppx_gen_rec ppx_deriving.std sedlex.ppx)))
