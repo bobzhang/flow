@@ -1,6 +1,6 @@
 (env
   (dev
-    (flags (:standard  -w -6-50  ))
+    (flags (:standard  -w -50 -warn-error -6-16 ))
     ; Use the default settings whicih is more strict
     ; warning 6 should be turned on later
     ; this is needed to make the diff clean

@@ -20,7 +20,7 @@ end
  * Sends input to stdin of spawned process if given.
  *)
 val exec :
-  string -> ?input:string -> ?env:Process_types.environment -> string list -> Process_types.t
+  string -> ?input:bytes -> ?env:Process_types.environment -> string list -> Process_types.t
 
 (**
  * Shells out the program with the given args.
@@ -39,7 +39,7 @@ val exec :
 val exec_with_working_directory :
   dir:string ->
   string ->
-  ?input:string ->
+  ?input:bytes ->
   ?env:Process_types.environment ->
   string list ->
   Process_types.t
@@ -49,7 +49,7 @@ val register_entry_point : string -> ('param -> unit) -> 'param Entry.t
 (** Wraps a entry point inside a Process, so we get Process's
  * goodness for free (read_and_wait_pid and is_ready). The entry will be
  * spawned into a separate process. *)
-val run_entry : ?input:string -> 'a Entry.t -> 'a -> Process_types.t
+val run_entry : ?input:bytes -> 'a Entry.t -> 'a -> Process_types.t
 
 (**
  * Read data from stdout and stderr until EOF is reached. Waits for

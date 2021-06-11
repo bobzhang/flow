@@ -204,7 +204,7 @@ let failure_msg (failure : Process_types.failure) : string =
     | Overflow_stdin -> Printf.sprintf "Process_aborted_input_too_large")
 
 let send_input_and_form_result
-    ?(input : string option)
+    ?(input : bytes option)
     ~(info : Process_types.invocation_info)
     ~(pid : int)
     ~(stdin_parent : Unix.file_descr)
@@ -241,7 +241,7 @@ let send_input_and_form_result
  *)
 let exec_no_chdir
     ~(prog : string)
-    ?(input : string option)
+    ?(input : bytes option)
     ~(env : Process_types.environment option)
     (args : string list) : Process_types.t =
   let info =
@@ -283,7 +283,7 @@ type chdir_params = {
 (** Wraps a entry point inside a Process, so we get Process's
  * goodness for free (read_and_wait_pid and is_ready). The entry will be
  * spawned into a separate process. *)
-let run_entry ?(input : string option) (entry : 'a Entry.t) (params : 'a) : Process_types.t =
+let run_entry ?(input : bytes option) (entry : 'a Entry.t) (params : 'a) : Process_types.t =
   let (stdin_child, stdin_parent) = Unix.pipe () in
   let (stdout_parent, stdout_child) = Unix.pipe () in
   let (stderr_parent, stderr_child) = Unix.pipe () in
@@ -317,7 +317,7 @@ let chdir_entry : (chdir_params, 'a, 'b) Daemon.entry = Entry.register "chdir_ma
 
 let exec
     (prog : string)
-    ?(input : string option)
+    ?(input : bytes option)
     ?(env : Process_types.environment option)
     (args : string list) : Process_types.t =
   exec_no_chdir ~prog ?input ~env args
@@ -325,7 +325,7 @@ let exec
 let exec_with_working_directory
     ~(dir : string)
     (prog : string)
-    ?(input : string option)
+    ?(input : bytes option)
     ?(env : Process_types.environment option)
     (args : string list) : Process_types.t =
   run_entry ?input chdir_entry { cwd = dir; prog; env; args }
