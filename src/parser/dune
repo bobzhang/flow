@@ -1,9 +1,23 @@
 (library
-  (name flow_parser)
-  (wrapped false)
-  (modules (:standard \ flow_parser_js flow_parser_dot_js))
-  (libraries
-    sedlex
-    wtf8)
-  (instrumentation (backend larndmarks))
-  (preprocess (pps ppx_gen_rec ppx_deriving.std sedlex.ppx)))
+ (name flow_parser)
+ (wrapped false)
+ (flags :standard -w -6)
+ (modules
+  (:standard \ flow_parser_js flow_parser_dot_js))
+ (private_modules 
+  ; flow_lexer 
+  jsx_parser
+  declaration_parser 
+  enum_parser
+  object_parser
+  pattern_parser
+  type_parser
+  statement_parser
+  )
+ (libraries landmarks sedlex wtf8 unix)
+ ; (instrumentation (backend landmarks))
+ ; 
+ (preprocess
+  (pps ppx_gen_rec ppx_deriving.std sedlex.ppx 
+  ; landmarks.ppx --auto
+  )))

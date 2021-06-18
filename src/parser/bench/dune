@@ -1,0 +1,5 @@
+(executable
+ (name bench)
+ (libraries flow_parser landmarks unix)
+ (preprocess (pps landmarks.ppx --auto))
+ )

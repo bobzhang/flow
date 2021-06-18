@@ -38,43 +38,43 @@ let filter_duplicate_errors =
         errs
     in
     List.rev deduped
-
+    let identifier ?restricted_error env =
+      (match Peek.token env with
+      (* "let" is disallowed as an identifier in a few situations. 11.6.2.1
+         lists them out. It is always disallowed in strict mode *)
+      | T_LET when in_strict_mode env -> error env Parse_error.StrictReservedWord
+      | T_LET when no_let env -> error_unexpected env
+      | T_LET -> ()
+      (* `allow_await` means that `await` is allowed to be a keyword,
+         which makes it illegal to use as an identifier.
+         https://tc39.github.io/ecma262/#sec-identifiers-static-semantics-early-errors *)
+      | T_AWAIT when allow_await env -> error env Parse_error.UnexpectedReserved
+      | T_AWAIT -> ()
+      (* `allow_yield` means that `yield` is allowed to be a keyword,
+         which makes it illegal to use as an identifier.
+         https://tc39.github.io/ecma262/#sec-identifiers-static-semantics-early-errors *)
+      | T_YIELD when allow_yield env -> error env Parse_error.UnexpectedReserved
+      | T_YIELD when in_strict_mode env -> error env Parse_error.StrictReservedWord
+      | T_YIELD -> ()
+      | t when token_is_strict_reserved t -> strict_error env Parse_error.StrictReservedWord
+      | t when token_is_reserved t -> error_unexpected env
+      | t ->
+        (match restricted_error with
+        | Some err when token_is_restricted t -> strict_error env err
+        | _ -> ()));
+      identifier_name env    
 module rec Parse : PARSER = struct
   module Type = Type_parser.Type (Parse)
   module Declaration = Declaration_parser.Declaration (Parse) (Type)
   module Pattern_cover = Pattern_cover.Cover (Parse)
-  module Expression = Expression_parser.Expression (Parse) (Type) (Declaration) (Pattern_cover)
+  module Expression = Expression_parser.Expression (Parse) (Type) (Declaration) (Pattern_cover) 
   module Object = Object_parser.Object (Parse) (Type) (Declaration) (Expression) (Pattern_cover)
   module Statement =
     Statement_parser.Statement (Parse) (Type) (Declaration) (Object) (Pattern_cover)
   module Pattern = Pattern_parser.Pattern (Parse) (Type)
   module JSX = Jsx_parser.JSX (Parse)
 
-  let identifier ?restricted_error env =
-    (match Peek.token env with
-    (* "let" is disallowed as an identifier in a few situations. 11.6.2.1
-       lists them out. It is always disallowed in strict mode *)
-    | T_LET when in_strict_mode env -> error env Parse_error.StrictReservedWord
-    | T_LET when no_let env -> error_unexpected env
-    | T_LET -> ()
-    (* `allow_await` means that `await` is allowed to be a keyword,
-       which makes it illegal to use as an identifier.
-       https://tc39.github.io/ecma262/#sec-identifiers-static-semantics-early-errors *)
-    | T_AWAIT when allow_await env -> error env Parse_error.UnexpectedReserved
-    | T_AWAIT -> ()
-    (* `allow_yield` means that `yield` is allowed to be a keyword,
-       which makes it illegal to use as an identifier.
-       https://tc39.github.io/ecma262/#sec-identifiers-static-semantics-early-errors *)
-    | T_YIELD when allow_yield env -> error env Parse_error.UnexpectedReserved
-    | T_YIELD when in_strict_mode env -> error env Parse_error.StrictReservedWord
-    | T_YIELD -> ()
-    | t when token_is_strict_reserved t -> strict_error env Parse_error.StrictReservedWord
-    | t when token_is_reserved t -> error_unexpected env
-    | t ->
-      (match restricted_error with
-      | Some err when token_is_restricted t -> strict_error env err
-      | _ -> ()));
-    identifier_name env
+  let identifier = identifier
 
   let rec program env =
     let leading = Eat.program_comments env in

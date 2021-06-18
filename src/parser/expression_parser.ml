@@ -691,7 +691,7 @@ module Expression
     let left = member_cover ~allow_optional_chain ~in_optional_chain env start_loc left in
     let optional = last_token env = Some T_PLING_PERIOD in
     let left_to_callee env =
-      let { remove_trailing; _ } = trailing_and_remover env in
+      let { remove_trailing; _ } = trailing_and_remover env [@landmark "fuck"] in
       remove_trailing (as_expression env left) (fun remover left -> remover#expression left)
     in
     let arguments ?targs env callee =
