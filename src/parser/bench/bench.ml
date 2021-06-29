@@ -2,7 +2,7 @@
 
 
 (* let filename = "react.development.js" *)
-let filename = "./flow_parser_dot_js.bc.js"
+let filename = "./flow_parser_dot_js.data"
 
 let read_whole_file filename =
   let ch = open_in_bin filename in
