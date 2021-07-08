@@ -431,7 +431,7 @@ let string_escape env lexbuf =
   | eof
   | '\\' ->
     let str = lexeme lexbuf in
-    let codes = Sedlexing.lexeme lexbuf |> Array.map Uchar.to_int in
+    let codes = Sedlexing.lexeme lexbuf (*|> Array.map Uchar.to_int*) in
     (env, str, codes, false)
   | ('x', hex_digit, hex_digit) ->
     let str = lexeme lexbuf in
@@ -488,7 +488,7 @@ let string_escape env lexbuf =
   | 'x'
   | '0' .. '7' ->
     let str = lexeme lexbuf in
-    let codes = Sedlexing.lexeme lexbuf |> Array.map Uchar.to_int in
+    let codes = Sedlexing.lexeme lexbuf (*|> Array.map Uchar.to_int*) in
     let env = illegal env (loc_of_lexbuf env lexbuf) in
     (env, str, codes, false)
   | line_terminator_sequence ->
@@ -497,7 +497,7 @@ let string_escape env lexbuf =
     (env, str, [||], false)
   | any ->
     let str = lexeme lexbuf in
-    let codes = Sedlexing.lexeme lexbuf |> Array.map Uchar.to_int in
+    let codes = Sedlexing.lexeme lexbuf (*|> Array.map Uchar.to_int*) in
     (env, str, codes, false)
   | _ -> failwith "unreachable"
 
