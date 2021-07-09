@@ -62,6 +62,29 @@ type lexbuf = {
   mutable finished: bool;
 }
 
+let clone (x : lexbuf) : lexbuf = {
+  refill = x.refill;
+  buf = x.buf;
+  len = x.len;
+  offset = x.offset;
+  pos = x.pos;
+   
+  curr_bol = x.curr_bol;
+  curr_line = x.curr_line;
+  start_pos = x.start_pos;
+  start_bol = x.start_bol;
+  start_line = x.start_line;
+
+  marked_pos = x.marked_pos;
+  marked_bol = x.marked_bol;
+  marked_line = x.marked_line;
+  marked_val = x.marked_val;
+
+  filename = x.filename;
+
+  finished = x.finished
+}
+
 let chunk_size = 512
 
 let empty_lexbuf = {
@@ -343,12 +366,14 @@ module Utf8 = struct
       | _ -> raise MalFormed
 
 
-
+    external (.!()<-) : int array -> int -> int -> unit = "%array_unsafe_set"
+    external (.!()) : int array -> int -> int = "%array_unsafe_get"
+    external (.![]) : string -> int -> char = "%string_unsafe_get"
     let compute_len s pos bytes =
       let rec aux n i =
         if i >= pos + bytes then if i = pos + bytes then n else raise MalFormed
         else
-          let w = width.(Char.code s.[i]) in
+          let w = width.(Char.code s.![i]) in
           if w > 0 then aux (succ n) (i + w)
           else raise MalFormed
       in
@@ -356,8 +381,8 @@ module Utf8 = struct
 
     let rec blit_to_int s spos a apos n =
       if n > 0 then begin
-        a.(apos) <- next s spos;
-        blit_to_int s (spos + width.(Char.code s.[spos])) a (succ apos) (pred n)
+        a.!(apos) <- next s spos;
+        blit_to_int s (spos + width.(Char.code s.![spos])) a (succ apos) (pred n)
       end
 
     let to_int_array s pos bytes =
@@ -368,7 +393,10 @@ module Utf8 = struct
 
 (**************************)
 
-    let store b p =
+    (***)  
+    let store b (p : int) = Buffer.add_utf_8_uchar b (Stdlib.Uchar.unsafe_of_int p) 
+    (* may raise different exceptions *)
+    (*
       if p <= 0x7f then
         Buffer.add_char b (Char.chr p)
       else if p <= 0x7ff then (
@@ -387,13 +415,13 @@ module Utf8 = struct
         Buffer.add_char b (Char.chr (0x80 lor ((p lsr 6)  land 0x3f)));
         Buffer.add_char b (Char.chr (0x80 lor (p land 0x3f)))
        )
-      else raise MalFormed
+      else raise MalFormed*)
 
-    let from_uchar_array a apos len =
+    let from_uchar_array (a : int array) apos len : string =
       let b = Buffer.create (len * 4) in
       let rec aux apos len =
         if len > 0
-        then (store b (Uchar.to_int a.(apos)); aux (succ apos) (pred len))
+        then (store b (Uchar.to_int a.!(apos)); aux (succ apos) (pred len))
         else Buffer.contents b in
       aux apos len
 

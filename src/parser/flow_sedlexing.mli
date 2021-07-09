@@ -33,6 +33,8 @@ type lexbuf
           its position from the beginning of the input stream,
           and the current position of the lexer. *)
 
+val clone : lexbuf -> lexbuf          
+
 exception InvalidCodepoint of int
     (** Raised by some functions to signal that some code point is not
         compatible with a specified encoding. *)
