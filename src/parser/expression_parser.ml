@@ -4,7 +4,8 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *)
-
+ 
+[@@@alert "@all"]
 module Ast = Flow_ast
 open Token
 open Parser_env
@@ -155,7 +156,7 @@ module Expression
       | T_ARROW ->
         (* x => 123 *)
         raise Try.Rollback
-      | T_COLON when last_token env = Some T_RPAREN ->
+      | T_COLON when (match last_token env with Some T_RPAREN -> true | _ -> false) ->
         (* (x): number => 123 *)
         raise Try.Rollback
       (* async x => 123 -- and we've already parsed async as an identifier
@@ -689,7 +690,7 @@ module Expression
 
   and call_cover ?(allow_optional_chain = true) ?(in_optional_chain = false) env start_loc left =
     let left = member_cover ~allow_optional_chain ~in_optional_chain env start_loc left in
-    let optional = last_token env = Some T_PLING_PERIOD in
+    let optional = (match last_token env with Some T_PLING_PERIOD -> true | _ -> false) in
     let left_to_callee env =
       let { remove_trailing; _ } = trailing_and_remover env in
       remove_trailing (as_expression env left) (fun remover left -> remover#expression left)

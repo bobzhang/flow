@@ -4,6 +4,8 @@
  (modules
   (:standard \ flow_parser_js flow_parser_dot_js))
  (libraries sedlex wtf8)
+;  (flags  -alert @polymorphic)
+ (instrumentation (backend landmarks ))
  (preprocess
   (pps ppx_gen_rec ppx_deriving.std sedlex.ppx)))
 
