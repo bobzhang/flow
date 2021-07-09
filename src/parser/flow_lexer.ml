@@ -7,6 +7,7 @@
 
 [@@@warning "-39"] (* sedlex inserts some unnecessary `rec`s *)
 
+module Sedlexing = Flow_sedlexing
 open Token
 open Lex_env
 

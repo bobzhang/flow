@@ -437,5 +437,5 @@ let jsx_pragma_expression =
     do_parse env left_hand_side true
 
 let string_is_valid_identifier_name str =
-  let lexbuf = Sedlexing.Utf8.from_string str in
+  let lexbuf = Flow_sedlexing.Utf8.from_string str in
   Flow_lexer.is_valid_identifier_name lexbuf

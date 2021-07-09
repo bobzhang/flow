@@ -191,12 +191,12 @@ type env = {
 
 (* constructor *)
 let init_env ?(token_sink = None) ?(parse_options = None) source content =
-  (* let lb = Sedlexing.Utf16.from_string
-     content (Some Sedlexing.Utf16.Little_endian) in *)
+  (* let lb = Flow_sedlexing.Utf16.from_string
+     content (Some Flow_sedlexing.Utf16.Little_endian) in *)
   let (lb, errors) =
-    try (Sedlexing.Utf8.from_string content, [])
-    with Sedlexing.MalFormed ->
-      (Sedlexing.Utf8.from_string "", [({ Loc.none with Loc.source }, Parse_error.MalformedUnicode)])
+    try (Flow_sedlexing.Utf8.from_string content, [])
+    with Flow_sedlexing.MalFormed ->
+      (Flow_sedlexing.Utf8.from_string "", [({ Loc.none with Loc.source }, Parse_error.MalformedUnicode)])
   in
   let parse_options =
     match parse_options with

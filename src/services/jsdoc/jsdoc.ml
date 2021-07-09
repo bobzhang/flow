@@ -116,10 +116,10 @@ module Parser = struct
   let rec description desc_buf lexbuf =
     match%sedlex lexbuf with
     | line_terminator_sequence ->
-      Buffer.add_string desc_buf (Sedlexing.Utf8.lexeme lexbuf);
+      Buffer.add_string desc_buf (Flow_sedlexing.Utf8.lexeme lexbuf);
       description_startline desc_buf lexbuf
     | any ->
-      Buffer.add_string desc_buf (Sedlexing.Utf8.lexeme lexbuf);
+      Buffer.add_string desc_buf (Flow_sedlexing.Utf8.lexeme lexbuf);
       description desc_buf lexbuf
     | _ (* eof *) -> description_of_desc_buf desc_buf
 
@@ -139,7 +139,7 @@ module Parser = struct
     match%sedlex lexbuf with
     | "[]" -> param_path ~path:(Param.Element path) lexbuf
     | ('.', identifier) ->
-      let member = Sedlexing.Utf8.sub_lexeme lexbuf 1 (Sedlexing.lexeme_length lexbuf - 1) in
+      let member = Flow_sedlexing.Utf8.sub_lexeme lexbuf 1 (Flow_sedlexing.lexeme_length lexbuf - 1) in
       param_path ~path:(Param.Member (path, member)) lexbuf
     | _ -> path
 
@@ -167,7 +167,7 @@ module Parser = struct
       let default = Buffer.contents def_buf in
       param_tag_pre_description jsdoc name path (Param.OptionalWithDefault default) lexbuf
     | Plus (Compl ']') ->
-      Buffer.add_string def_buf (Sedlexing.Utf8.lexeme lexbuf);
+      Buffer.add_string def_buf (Flow_sedlexing.Utf8.lexeme lexbuf);
       param_tag_optional_default jsdoc name path def_buf lexbuf
     | _ ->
       let default = Buffer.contents def_buf in
@@ -176,7 +176,7 @@ module Parser = struct
   and param_tag_optional jsdoc lexbuf =
     match%sedlex lexbuf with
     | identifier ->
-      let name = Sedlexing.Utf8.lexeme lexbuf in
+      let name = Flow_sedlexing.Utf8.lexeme lexbuf in
       let path = param_path lexbuf in
       (match%sedlex lexbuf with
       | ']' -> param_tag_pre_description jsdoc name path Param.Optional lexbuf
@@ -199,7 +199,7 @@ module Parser = struct
     | '{' -> param_tag_type jsdoc lexbuf
     | '[' -> param_tag_optional jsdoc lexbuf
     | identifier ->
-      let name = Sedlexing.Utf8.lexeme lexbuf in
+      let name = Flow_sedlexing.Utf8.lexeme lexbuf in
       let path = param_path lexbuf in
       param_tag_pre_description jsdoc name path Param.NotOptional lexbuf
     | _ -> skip_tag jsdoc lexbuf
@@ -226,14 +226,14 @@ module Parser = struct
     | "desc" ->
       description_tag jsdoc lexbuf
     | identifier ->
-      let name = Sedlexing.Utf8.lexeme lexbuf in
+      let name = Flow_sedlexing.Utf8.lexeme lexbuf in
       unrecognized_tag jsdoc name lexbuf
     | _ -> skip_tag jsdoc lexbuf
 
   let initial lexbuf =
     match%sedlex lexbuf with
     | ('*', Compl '*') ->
-      Sedlexing.rollback lexbuf;
+      Flow_sedlexing.rollback lexbuf;
       let desc_buf = Buffer.create 127 in
       let description = description_startline desc_buf lexbuf in
       let jsdoc = { empty with description } in
@@ -242,7 +242,7 @@ module Parser = struct
 end
 
 let parse str =
-  let lexbuf = Sedlexing.Utf8.from_string str in
+  let lexbuf = Flow_sedlexing.Utf8.from_string str in
   Parser.initial lexbuf
 
 (* find and parse the last jsdoc-containing comment in the list if exists *)

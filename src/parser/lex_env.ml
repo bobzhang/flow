@@ -7,7 +7,7 @@
 
 type t = {
   lex_source: File_key.t option;
-  lex_lb: Sedlexing.lexbuf;
+  lex_lb: Flow_sedlexing.lexbuf;
   lex_bol: bol;
   lex_in_comment_syntax: bool;
   lex_enable_comment_syntax: bool;

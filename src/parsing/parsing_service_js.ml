@@ -316,10 +316,10 @@ let extract_docblock =
        * more context). At some point this should change back to consuming only
        * the first token. *)
       let lb =
-        try Sedlexing.Utf8.from_string content
-        with Sedlexing.MalFormed ->
+        try Flow_sedlexing.Utf8.from_string content
+        with Flow_sedlexing.MalFormed ->
           Hh_logger.warn "File %s is malformed" (File_key.to_string filename);
-          Sedlexing.Utf8.from_string ""
+          Flow_sedlexing.Utf8.from_string ""
       in
       let env = Lex_env.new_lex_env (Some filename) lb ~enable_types_in_comments:false in
       let rec get_first_comment_contents ?(i = 0) env =
